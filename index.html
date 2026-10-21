@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f6f2">
+  <title>ตารางอาหาร & ทำอะไรกินดี?</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header class="top">
+      <h1>มีอะไร ทำอะไรกินดี?</h1>
+      <p class="sub">วางแผนเมนูอาหารประจำสัปดาห์ และเช็ควัตถุดิบทำง่าย ๆ</p>
+    </header>
+
+    <!-- แถบสลับแท็บ (Tabs) -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="tab-planner">📅 ตารางอาหาร 7 วัน</button>
+      <button class="tab-btn" data-tab="tab-pantry">🥦 วัตถุดิบ & ค้นหาเมนู</button>
+    </nav>
+
+    <!-- แท็บ 1: จัดการตารางอาหารประจำสัปดาห์ -->
+    <section id="tab-planner" class="tab-content active">
+      <!-- แถบแสดงเป้าหมายโภชนาการประจำวัน -->
+      <div class="nutrition-goal-banner">
+        <div class="nutrition-goal-info">
+          <span class="goal-tag">🎯 เป้าหมายโภชนาการ</span>
+          <span id="currentGoalText" class="goal-text">กำลังโหลดเป้าหมาย...</span>
+        </div>
+        <button class="btn-outline goal-setting-btn" id="openNutritionModalBtn">⚙️ ตั้งค่าเป้าหมาย</button>
+      </div>
+
+      <div class="planner-top-actions">
+        <span class="count" id="plannerSummary">กำลังโหลดตาราง...</span>
+        <div class="planner-btn-group">
+          <button class="action primary auto-plan-btn" id="autoPlanBtn">⚡ สุ่มจัดตารางตามเป้าหมายแคลอรี</button>
+          <button class="btn-outline" id="groceryListBtn">🛒 รายการของที่ต้องซื้อ</button>
+          <button class="btn-outline" id="clearPlannerBtn">ล้างตารางทั้งหมด</button>
+        </div>
+      </div>
+
+      <!-- กล่องตารางอาหาร 7 วัน -->
+      <div id="plannerGrid" class="planner-grid">
+        <!-- เรนเดอร์ผ่าน planner.js -->
+      </div>
+    </section>
+
+    <!-- แท็บ 2: วัตถุดิบและค้นหาเมนู -->
+    <section id="tab-pantry" class="tab-content">
+      <section class="panel">
+        <div class="section-head">
+          <h2>วัตถุดิบที่มี</h2>
+          <span class="small" id="selectedCount"></span>
+        </div>
+        <input id="search" type="search" placeholder="ค้นหาวัตถุดิบ…" aria-label="ค้นหาวัตถุดิบ">
+        <div id="ingredients"></div>
+        <div class="actions">
+          <button class="action" id="clear">ล้างที่เลือก</button>
+          <button class="action primary" id="random">เลือกให้หน่อย</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>วิธีทำ</h2>
+          <span class="small">เลือกได้หลายแบบ</span>
+        </div>
+        <div id="filters" class="filter-row"></div>
+      </section>
+
+      <section>
+        <div class="results-title">
+          <h2>ทำได้เลย</h2>
+          <span id="readyCount" class="count"></span>
+        </div>
+        <div id="ready"></div>
+
+        <div class="results-title">
+          <h2>ขาดอีกนิดเดียว</h2>
+          <span id="closeCount" class="count"></span>
+        </div>
+        <div id="close"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- Modal สำหรับเลือกเมนูอาหารใส่ตาราง (Step 2) -->
+  <div id="menuPickerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalSlotTitle">เลือกเมนูอาหาร</h2>
+          <span class="small" id="modalSlotSubtitle">คลิกเมนูที่ต้องการเพื่อใส่ลงในตาราง</span>
+        </div>
+        <button class="modal-close-btn" id="closeModalBtn" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <input id="modalSearch" type="search" placeholder="ค้นหาชื่อเมนูหรือวัตถุดิบ…" aria-label="ค้นหาเมนู">
+        <div id="modalFilters" class="filter-row"></div>
+        <div id="modalMenuList" class="modal-menu-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal สรุปรายการของที่ต้องซื้อ (Step 4: Smart Grocery List) -->
+  <div id="groceryModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card grocery-modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>🛒 รายการของที่ต้องซื้อประจำสัปดาห์</h2>
+          <span class="small">คำนวณจากเมนูในตารางอาหาร เทียบกับของที่คุณมีในตู้เย็น</span>
+        </div>
+        <button class="modal-close-btn" id="closeGroceryBtn" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- สรุปตัวเลขสถิติ -->
+        <div class="grocery-stats" id="groceryStats"></div>
+
+        <!-- รายการของแยกตามหมวดหมู่ -->
+        <div id="groceryContent" class="grocery-content"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="action primary" id="copyGroceryBtn">📋 คัดลอกรายการไปส่งในแชท / โน้ต</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal ตั้งค่าเป้าหมายสารอาหาร (Nutrition Goal Modal) -->
+  <div id="nutritionModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card nutrition-modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>🎯 ตั้งค่าเป้าหมายสารอาหารประจำวัน</h2>
+          <span class="small">เลือกเป้าหมายด่วน หรือคำนวณตามสัดส่วนร่างกายของคุณ</span>
+        </div>
+        <button class="modal-close-btn" id="closeNutritionBtn" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- ตัวเลือกด่วน (Presets) -->
+        <div class="form-section">
+          <h4>⚡ เลือกเป้าหมายด่วน</h4>
+          <div class="preset-grid">
+            <button type="button" class="preset-btn" data-preset-cal="1500" data-preset-pro="100">
+              <span class="preset-icon">🏃</span>
+              <strong>คุมน้ำหนัก / ลดไขมัน</strong>
+              <span>1,500 kcal · โปรตีน 100g</span>
+            </button>
+            <button type="button" class="preset-btn" data-preset-cal="1800" data-preset-pro="80">
+              <span class="preset-icon">⚖️</span>
+              <strong>รักษาสุขภาพทั่วไป</strong>
+              <span>1,800 kcal · โปรตีน 80g</span>
+            </button>
+            <button type="button" class="preset-btn" data-preset-cal="2200" data-preset-pro="130">
+              <span class="preset-icon">💪</span>
+              <strong>สร้างกล้ามเนื้อ</strong>
+              <span>2,200 kcal · โปรตีน 130g</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- เครื่องคำนวณ BMR & TDEE -->
+        <div class="form-section">
+          <h4>🧮 คำนวณตามสัดส่วนร่างกาย (BMR & TDEE)</h4>
+          <div class="calc-grid">
+            <div class="form-group">
+              <label>เพศ</label>
+              <select id="calcGender">
+                <option value="male">ชาย</option>
+                <option value="female">หญิง</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>อายุ (ปี)</label>
+              <input type="number" id="calcAge" value="25" min="10" max="100">
+            </div>
+            <div class="form-group">
+              <label>น้ำหนัก (กก.)</label>
+              <input type="number" id="calcWeight" value="65" min="30" max="200">
+            </div>
+            <div class="form-group">
+              <label>ส่วนสูง (ซม.)</label>
+              <input type="number" id="calcHeight" value="170" min="100" max="230">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label>กิจกรรมประจำวัน</label>
+            <select id="calcActivity">
+              <option value="1.2">นั่งทำงานเฉย ๆ (แทบไม่ออกกำลังกาย)</option>
+              <option value="1.375" selected>ออกกำลังกายเบา ๆ (1-3 วัน/สัปดาห์)</option>
+              <option value="1.55">ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)</option>
+              <option value="1.725">ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label>เป้าหมาย</label>
+            <select id="calcGoal">
+              <option value="cut">ลดน้ำหนัก / ลดไขมัน (ลดแคลอรี 15%)</option>
+              <option value="maintain" selected>รักษาน้ำหนักและสุขภาพ</option>
+              <option value="bulk">เพิ่มน้ำหนัก / สร้างกล้ามเนื้อ (เพิ่มแคลอรี 15%)</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn-outline" id="runCalcBtn" style="width: 100%; margin-top: 12px; font-weight: 600;">
+            ⚡ คำนวณค่าจากข้อมูลนี้
+          </button>
+        </div>
+
+        <!-- ปรับแต่งค่าเป้าหมายโดยตรง -->
+        <div class="form-section">
+          <h4>✏️ ค่าเป้าหมายที่จะบันทึก</h4>
+          <div class="calc-grid">
+            <div class="form-group">
+              <label>แคลอรีเป้าหมาย (Kcal/วัน)</label>
+              <input type="number" id="targetCaloriesInput" value="1800" min="800" max="4000">
+            </div>
+            <div class="form-group">
+              <label>โปรตีนเป้าหมาย (กรัม/วัน)</label>
+              <input type="number" id="targetProteinInput" value="80" min="30" max="300">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="action primary" id="saveNutritionGoalBtn">💾 บันทึกเป้าหมาย</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. ข้อมูลเมนูและวัตถุดิบ (Data Layer) -->
+  <script src="data.js"></script>
+  <!-- 2. ตรรกะจัดการตารางอาหาร (Meal Planner Logic) -->
+  <script src="planner.js"></script>
+  <!-- 3. ตรรกะการทำงานหลักและวัตถุดิบ (App Logic) -->
+  <script src="app.js"></script>
+</body>
+</html>
