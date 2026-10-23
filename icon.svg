@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a7d5a"/>
+      <stop offset="100%" stop-color="#1b543b"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="236" fill="url(#bgGrad)"/>
+
+  <!-- Food Bowl & Steam Group -->
+  <g filter="url(#shadow)" fill="#ffffff">
+    <!-- Steam Curves -->
+    <path d="M190 190 Q175 155 190 125 T190 85" fill="none" stroke="#ffe8d6" stroke-width="14" stroke-linecap="round"/>
+    <path d="M256 195 Q240 150 256 115 T256 70" fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+    <path d="M322 190 Q307 155 322 125 T322 85" fill="none" stroke="#ffe8d6" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- Bowl Rim -->
+    <rect x="110" y="220" width="292" height="24" rx="12" fill="#ffffff"/>
+
+    <!-- Bowl Body -->
+    <path d="M125 244 Q140 375 256 375 Q372 375 387 244 Z" fill="#ffffff"/>
+
+    <!-- Bowl Base / Foot -->
+    <rect x="200" y="375" width="112" height="16" rx="6" fill="#e5e7eb"/>
+  </g>
+</svg>
+

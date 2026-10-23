@@ -25,11 +25,41 @@ body {
 main {
   max-width: 860px;
   margin: auto;
-  padding: 20px 16px 48px;
+  padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px));
 }
 
 .top {
   padding: 12px 2px 14px;
+}
+
+.header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.btn-install {
+  background: var(--green);
+  color: white;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 15px;
+  border-radius: 99px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 3px 8px rgba(35, 107, 76, 0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-install:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(35, 107, 76, 0.35);
 }
 
 h1 {

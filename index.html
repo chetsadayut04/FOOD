@@ -2,16 +2,35 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f6f2">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#236b4c">
   <title>ตารางอาหาร & ทำอะไรกินดี?</title>
+
+  <!-- PWA Manifest & App Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Apple iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ตารางอาหาร">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
     <header class="top">
-      <h1>มีอะไร ทำอะไรกินดี?</h1>
-      <p class="sub">วางแผนเมนูอาหารประจำสัปดาห์ และเช็ควัตถุดิบทำง่าย ๆ</p>
+      <div class="header-main">
+        <div>
+          <h1>มีอะไร ทำอะไรกินดี?</h1>
+          <p class="sub">วางแผนเมนูอาหารประจำสัปดาห์ และเช็ควัตถุดิบทำง่าย ๆ</p>
+        </div>
+        <button id="pwaInstallBtn" class="btn-install" style="display: none;" title="ติดตั้งเป็นแอป">
+          📲 ติดตั้งแอป
+        </button>
+      </div>
     </header>
 
     <!-- แถบสลับแท็บ (Tabs) -->
@@ -240,5 +259,7 @@
   <script src="planner.js"></script>
   <!-- 3. ตรรกะการทำงานหลักและวัตถุดิบ (App Logic) -->
   <script src="app.js"></script>
+  <!-- 4. PWA Service Worker & App Installation -->
+  <script src="pwa.js"></script>
 </body>
 </html>
