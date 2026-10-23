@@ -25,41 +25,11 @@ body {
 main {
   max-width: 860px;
   margin: auto;
-  padding: 20px 16px calc(48px + env(safe-area-inset-bottom, 0px));
+  padding: 20px 16px 48px;
 }
 
 .top {
   padding: 12px 2px 14px;
-}
-
-.header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.btn-install {
-  background: var(--green);
-  color: white;
-  border: none;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 9px 15px;
-  border-radius: 99px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 3px 8px rgba(35, 107, 76, 0.25);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.btn-install:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(35, 107, 76, 0.35);
 }
 
 h1 {
@@ -363,9 +333,16 @@ input[type="search"] {
   border-radius: 99px;
 }
 
+.snack-toggle-btn.active {
+  background: var(--soft);
+  border-color: #9ac4a9;
+  color: var(--green);
+  font-weight: 600;
+}
+
 .meal-slots {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
   gap: 10px;
 }
 
@@ -387,6 +364,10 @@ input[type="search"] {
   border-color: #badcc6;
 }
 
+.slot-snack {
+  border-color: #ffd8a8;
+}
+
 .slot-empty {
   border: 1.5px dashed var(--line);
   cursor: pointer;
@@ -399,6 +380,19 @@ input[type="search"] {
 .slot-empty:hover {
   border-color: var(--green);
   background: var(--soft);
+}
+
+.slot-empty-snack {
+  border-color: #ffd8a8;
+}
+
+.slot-empty-snack:hover {
+  border-color: var(--orange);
+  background: var(--soft-orange);
+}
+
+.slot-empty-snack .empty-prompt {
+  color: var(--orange);
 }
 
 .meal-header {

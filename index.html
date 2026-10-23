@@ -2,35 +2,20 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#236b4c">
   <title>ตารางอาหาร & ทำอะไรกินดี?</title>
 
-  <!-- PWA Manifest & App Icons -->
-  <link rel="manifest" href="manifest.json">
+  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="icon.svg">
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-  <link rel="apple-touch-icon" href="icon-192.png">
-
-  <!-- Apple iOS PWA Support -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="ตารางอาหาร">
 
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
     <header class="top">
-      <div class="header-main">
-        <div>
-          <h1>มีอะไร ทำอะไรกินดี?</h1>
-          <p class="sub">วางแผนเมนูอาหารประจำสัปดาห์ และเช็ควัตถุดิบทำง่าย ๆ</p>
-        </div>
-        <button id="pwaInstallBtn" class="btn-install" style="display: none;" title="ติดตั้งเป็นแอป">
-          📲 ติดตั้งแอป
-        </button>
-      </div>
+      <h1>มีอะไร ทำอะไรกินดี?</h1>
+      <p class="sub">วางแผนเมนูอาหารประจำสัปดาห์ และเช็ควัตถุดิบทำง่าย ๆ</p>
     </header>
 
     <!-- แถบสลับแท็บ (Tabs) -->
@@ -41,19 +26,28 @@
 
     <!-- แท็บ 1: จัดการตารางอาหารประจำสัปดาห์ -->
     <section id="tab-planner" class="tab-content active">
-      <!-- แถบแสดงเป้าหมายโภชนาการประจำวัน -->
-      <div class="nutrition-goal-banner">
-        <div class="nutrition-goal-info">
-          <span class="goal-tag">🎯 เป้าหมายโภชนาการ</span>
-          <span id="currentGoalText" class="goal-text">กำลังโหลดเป้าหมาย...</span>
+      <!-- แถบสรุปความต้องการอาหารของผู้ใช้ (Preference Banner) -->
+      <div class="preference-banner">
+        <div class="preference-banner-left">
+          <div class="pref-badge-row">
+            <span class="pref-badge">🎯 ความต้องการอาหารของคุณ</span>
+            <span class="count" id="plannerSummary">กำลังโหลด...</span>
+          </div>
+          <div id="currentPreferencesSummary" class="pref-summary-text">
+            กำลังโหลดความต้องการ...
+          </div>
         </div>
-        <button class="btn-outline goal-setting-btn" id="openNutritionModalBtn">⚙️ ตั้งค่าเป้าหมาย</button>
+        <div class="pref-banner-actions">
+          <button class="action primary pref-wizard-btn" id="openPreferenceModalBtn">
+            ✨ ปรับความต้องการอาหาร
+          </button>
+        </div>
       </div>
 
       <div class="planner-top-actions">
-        <span class="count" id="plannerSummary">กำลังโหลดตาราง...</span>
         <div class="planner-btn-group">
-          <button class="action primary auto-plan-btn" id="autoPlanBtn">⚡ สุ่มจัดตารางตามเป้าหมายแคลอรี</button>
+          <button class="action primary auto-plan-btn" id="autoPlanBtn">⚡ สุ่มจัดตารางตามเงื่อนไขนี้</button>
+          <button class="btn-outline snack-toggle-btn" id="toggleSnackBtn" title="สลับระหว่าง 4 มื้อ (มีมื้อว่าง) กับ 3 มื้อหลัก">🥪 มื้อว่าง: เปิดอยู่</button>
           <button class="btn-outline" id="groceryListBtn">🛒 รายการของที่ต้องซื้อ</button>
           <button class="btn-outline" id="clearPlannerBtn">ล้างตารางทั้งหมด</button>
         </div>
@@ -253,13 +247,100 @@
     </div>
   </div>
 
+  <!-- Modal กรอกความต้องการอาหาร (Step 2: Preference Wizard Modal) -->
+  <div id="preferenceModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card pref-modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>✨ กำหนดความต้องการอาหารของคุณ</h2>
+          <span class="small">เลือกเป้าหมาย ข้อจำกัด และรูปแบบที่ต้องการ เพื่อให้ระบบจัดตารางอาหาร 7 วันให้</span>
+        </div>
+        <button class="modal-close-btn" id="closePreferenceBtn" aria-label="ปิดหน้าต่าง">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 1. เป้าหมาย / สไตล์อาหาร -->
+        <div class="pref-section">
+          <h4>🎯 สไตล์อาหารที่ต้องการ (เลือก 1 ข้อ)</h4>
+          <div class="pref-chips-grid" id="prefGoalChips"></div>
+        </div>
+
+        <!-- 2. สิ่งที่ไม่ทาน / แพ้อาหาร -->
+        <div class="pref-section">
+          <h4>🚫 สิ่งที่ไม่ทาน / แพ้อาหาร (เลือกได้หลายข้อ)</h4>
+          <div class="pref-chips-grid" id="prefExclusionChips"></div>
+        </div>
+
+        <!-- 3. วิธีปรุงที่ต้องการ -->
+        <div class="pref-section">
+          <h4>🍳 วิธีปรุงอาหาร</h4>
+          <div class="pref-chips-row" id="prefMethodChips">
+            <button type="button" class="pref-chip active" data-method-val="all">✨ ไม่จำกัด (ทุกวิธี)</button>
+            <button type="button" class="pref-chip" data-method-val="ต้ม">🍲 ต้ม / แกง</button>
+            <button type="button" class="pref-chip" data-method-val="ย่าง">🔥 ย่าง</button>
+            <button type="button" class="pref-chip" data-method-val="ทอด">🍳 ทอด / ผัด</button>
+          </div>
+        </div>
+
+        <!-- 4. รูปแบบมื้ออาหาร -->
+        <div class="pref-section">
+          <h4>🥪 รูปแบบมื้ออาหารต่อวัน</h4>
+          <div class="pref-chips-grid" id="prefPatternChips">
+            <button type="button" class="pref-chip-card active" data-pattern-val="4">
+              <strong>🥪 3 มื้อหลัก + 1 มื้อว่างบ่าย (แนะนำ)</strong>
+              <span>กินสบาย ไม่อิ่มจุกเกินไป สารอาหารและแคลอรีสมดุลตลอดวัน</span>
+            </button>
+            <button type="button" class="pref-chip-card" data-pattern-val="3">
+              <strong>🍽️ 3 มื้อหลักเท่านั้น</strong>
+              <span>เช้า กลางวัน เย็น สำหรับคนไม่ชอบทานของว่าง</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. พลังงานเป้าหมาย -->
+        <div class="pref-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="margin: 0;">🔥 พลังงานเป้าหมายต่อวัน</h4>
+            <button type="button" class="btn-outline" id="prefOpenCalcBtn" style="padding: 4px 10px; font-size: 12px;">🧮 คำนวณ BMR/TDEE ละเอียด</button>
+          </div>
+          <div class="calc-grid">
+            <div class="form-group">
+              <label>แคลอรีเป้าหมาย (Kcal/วัน)</label>
+              <input type="number" id="prefCaloriesInput" value="1800" min="800" max="4000">
+            </div>
+            <div class="form-group">
+              <label>โปรตีนเป้าหมาย (กรัม/วัน)</label>
+              <input type="number" id="prefProteinInput" value="80" min="30" max="300">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; gap: 10px;">
+        <button class="action primary" id="saveAndGeneratePrefBtn" style="flex: 1; padding: 13px; font-size: 15px;">
+          ⚡ บันทึกและสร้างตารางอาหารสัปดาห์นี้
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 1. ข้อมูลเมนูและวัตถุดิบ (Data Layer) -->
   <script src="data.js"></script>
   <!-- 2. ตรรกะจัดการตารางอาหาร (Meal Planner Logic) -->
   <script src="planner.js"></script>
   <!-- 3. ตรรกะการทำงานหลักและวัตถุดิบ (App Logic) -->
   <script src="app.js"></script>
-  <!-- 4. PWA Service Worker & App Installation -->
-  <script src="pwa.js"></script>
+
+  <!-- เคลียร์ Service Worker เก่าของ PWA (เพื่อให้กลับมาทำงานเป็นเว็บปกติ 100%) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(r => r.unregister());
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
+  </script>
 </body>
 </html>

@@ -9,11 +9,20 @@ const DAYS = [
   { id: "sun", label: "วันอาทิตย์", short: "อา." }
 ];
 
-const MEALS = [
+// มื้ออาหารทั้งหมด (รวมมื้อว่างบ่ายเพื่อบาลานซ์สารอาหาร)
+const ALL_MEALS = [
   { id: "breakfast", label: "มื้อเช้า", icon: "🌅" },
   { id: "lunch", label: "มื้อกลางวัน", icon: "☀️" },
+  { id: "snack", label: "มื้อว่างบ่าย", icon: "🥪", isSnack: true },
   { id: "dinner", label: "มื้อเย็น", icon: "🌙" }
 ];
+
+// การตั้งค่าเปิด/ปิดมื้อว่าง
+let includeSnack = JSON.parse(localStorage.getItem("include-snack-v1") ?? "true");
+
+function getActiveMeals() {
+  return includeSnack ? ALL_MEALS : ALL_MEALS.filter(m => !m.isSnack);
+}
 
 // โครงสร้างเริ่มต้นของตารางอาหาร 7 วัน
 function createDefaultPlan() {
@@ -22,6 +31,7 @@ function createDefaultPlan() {
     plan[day.id] = {
       breakfast: null,
       lunch: null,
+      snack: null,
       dinner: null
     };
   });
@@ -32,14 +42,16 @@ function createDefaultPlan() {
 let currentPlan = JSON.parse(localStorage.getItem("mealplan-v1") || "null");
 if (!currentPlan) {
   currentPlan = createDefaultPlan();
-  // ข้อมูลตัวอย่างเริ่มต้นที่พลังงานเต็มอิ่มตามเป้าหมาย
+  // ตัวอย่างเริ่มต้น: 3 มื้อหลัก + 1 มื้อว่าง ที่สารอาหารลงตัวและอิ่มสบาย
   currentPlan.mon.breakfast = { name: "ต้มจืดไข่น้ำ", methods: ["ต้ม", "ทอด"], withRice: true, sideDish: null };
-  currentPlan.mon.lunch = { name: "ข้าวราดผัดกะเพราหมู", methods: ["ทอด"], withRice: false, sideDish: "ไข่ดาว" };
-  currentPlan.mon.dinner = { name: "หมูทอดกระเทียม", methods: ["ทอด"], withRice: true, sideDish: null };
+  currentPlan.mon.lunch = { name: "ข้าวราดผัดกะเพราหมู", methods: ["ทอด"], withRice: false, sideDish: null };
+  currentPlan.mon.snack = { name: "กล้วยหอม", methods: ["สด"], withRice: false, sideDish: null };
+  currentPlan.mon.dinner = { name: "ไก่ย่าง", methods: ["ย่าง"], withRice: true, sideDish: null };
 
   currentPlan.tue.breakfast = { name: "ข้าวผัดไข่", methods: ["ทอด"], withRice: false, sideDish: null };
   currentPlan.tue.lunch = { name: "ผัดซีอิ๊วหมู", methods: ["ทอด"], withRice: false, sideDish: null };
-  currentPlan.tue.dinner = { name: "ไก่ย่าง", methods: ["ย่าง"], withRice: true, sideDish: null };
+  currentPlan.tue.snack = { name: "นมถั่วเหลืองหวานน้อย", methods: ["ต้ม"], withRice: false, sideDish: null };
+  currentPlan.tue.dinner = { name: "ปลาย่าง", methods: ["ย่าง"], withRice: true, sideDish: null };
 }
 
 // บันทึกลง LocalStorage
@@ -104,6 +116,27 @@ function clearAllPlan() {
     currentPlan = createDefaultPlan();
     savePlan();
     renderPlanner();
+  }
+}
+
+// สลับโหมดเปิด/ปิดมื้อว่างบ่าย
+function toggleSnackSetting() {
+  includeSnack = !includeSnack;
+  localStorage.setItem("include-snack-v1", JSON.stringify(includeSnack));
+  updateSnackBtnUI();
+  renderPlanner();
+}
+
+function updateSnackBtnUI() {
+  const btn = document.querySelector("#toggleSnackBtn");
+  if (btn) {
+    if (includeSnack) {
+      btn.classList.add("active");
+      btn.textContent = "🥪 มื้อว่าง: เปิดอยู่ (4 มื้อ)";
+    } else {
+      btn.classList.remove("active");
+      btn.textContent = "🥪 มื้อว่าง: ปิดอยู่ (3 มื้อ)";
+    }
   }
 }
 
@@ -185,19 +218,22 @@ function runBmrTdeeCalculation() {
 }
 
 // ==========================================
-// สุ่มจัดตารางอาหารอัจฉริยะตามเป้าหมายแคลอรีจริง (Smart Nutrition Auto-Plan)
+// สุ่มจัดตารางอาหารอัจฉริยะ (Smart Auto-Plan พร้อมมื้อว่างบาลานซ์)
 // ==========================================
 function autoGeneratePlan() {
+  const activeMeals = getActiveMeals();
   let hasExisting = false;
+
   DAYS.forEach(d => {
-    MEALS.forEach(m => {
+    activeMeals.forEach(m => {
       if (currentPlan[d.id]?.[m.id]) hasExisting = true;
     });
   });
 
   let onlyEmpty = false;
   if (hasExisting) {
-    const overwriteAll = confirm(`ต้องการจัดตารางอาหารตามเป้าหมาย (${nutritionGoal.calories.toLocaleString()} Kcal/วัน):\n• กด [ตกลง / OK] เพื่อสุ่มใหม่ทั้งหมด 21 มื้อ\n• กด [ยกเลิก / Cancel] เพื่อสุ่มเฉพาะช่องที่ยังว่างอยู่`);
+    const totalSlots = DAYS.length * activeMeals.length;
+    const overwriteAll = confirm(`ต้องการจัดตารางอาหารตามเป้าหมาย (${nutritionGoal.calories.toLocaleString()} Kcal/วัน):\n• กด [ตกลง / OK] เพื่อสุ่มใหม่ทั้งหมด ${totalSlots} มื้อ\n• กด [ยกเลิก / Cancel] เพื่อสุ่มเฉพาะช่องที่ยังว่างอยู่`);
     if (!overwriteAll) {
       onlyEmpty = true;
     }
@@ -208,7 +244,7 @@ function autoGeneratePlan() {
 
   if (onlyEmpty) {
     DAYS.forEach(d => {
-      MEALS.forEach(m => {
+      activeMeals.forEach(m => {
         if (currentPlan[d.id]?.[m.id]) {
           usedMenuNames.add(currentPlan[d.id][m.id].name);
         }
@@ -216,71 +252,90 @@ function autoGeneratePlan() {
     });
   }
 
-  // แยกเมนูหลัก (มื้ออาหารจริง) และเมนูเคียง/ของว่าง
-  const mainAndSinglePool = menus.filter(m => m.type !== "side");
-  const sidePool = menus.filter(m => m.type === "side");
+  // แยกกลุ่มเมนู
+  const mainAndSinglePool = menus.filter(m => m.type !== "side" && m.type !== "snack");
+  const snackPool = menus.filter(m => m.type === "snack");
 
   DAYS.forEach(day => {
     if (!currentPlan[day.id]) currentPlan[day.id] = {};
 
-    const slots = ["breakfast", "lunch", "dinner"];
+    const slots = activeMeals.map(m => m.id);
     const neededSlots = slots.filter(s => !onlyEmpty || !currentPlan[day.id][s]);
 
     if (!neededSlots.length) return;
 
-    // คำนวณแคลอรีที่มีอยู่แล้วในวันนั้น
-    let existingCalories = 0;
-    slots.forEach(s => {
-      if (currentPlan[day.id][s]) {
-        existingCalories += getMealNutrition(currentPlan[day.id][s]).calories;
-      }
-    });
-
-    // กำหนดสัดส่วนพลังงานของแต่ละมื้อ
-    // เช้า: ~28%, กลางวัน: ~38%, เย็น: ~34%
-    const slotTargets = {
+    // คำนวณสัดส่วนพลังงานตามโมเดลโภชนาการ
+    // ถ้ารวมมื้อว่าง: เช้า 25%, กลางวัน 35%, มื้อว่าง 15%, เย็น 25%
+    // ถ้าไม่รวมมื้อว่าง: เช้า 28%, กลางวัน 38%, เย็น 34%
+    const slotTargets = includeSnack ? {
+      breakfast: nutritionGoal.calories * 0.25,
+      lunch: nutritionGoal.calories * 0.35,
+      snack: nutritionGoal.calories * 0.15,
+      dinner: nutritionGoal.calories * 0.25
+    } : {
       breakfast: nutritionGoal.calories * 0.28,
       lunch: nutritionGoal.calories * 0.38,
       dinner: nutritionGoal.calories * 0.34
     };
 
     neededSlots.forEach(slot => {
-      const targetCalForSlot = slotTargets[slot] || (nutritionGoal.calories / 3);
+      const isSnackSlot = (slot === "snack");
+      const targetCal = slotTargets[slot] || (nutritionGoal.calories / slots.length);
 
-      // กรองเมนูที่ยังไม่ซ้ำในสัปดาห์นี้
-      const available = mainAndSinglePool.filter(m => !usedMenuNames.has(m.name));
-      const poolToUse = available.length ? available : mainAndSinglePool;
+      if (isSnackSlot) {
+        // เลือกของว่างสุขภาพ
+        const availableSnacks = snackPool.filter(m => !usedMenuNames.has(m.name));
+        const poolToUse = availableSnacks.length ? availableSnacks : snackPool;
 
-      // คัดเลือกเมนูที่เมื่อรวมข้าวแล้วใกล้เคียงเป้าหมายของมื้อนั้นมากที่สุด
-      const scored = poolToUse.map(dish => {
-        const withRice = (dish.type === "main");
-        const mealCal = dish.calories + (withRice ? RICE_SERVING.calories : 0);
-        const calDiff = Math.abs(mealCal - targetCalForSlot);
-        const pantryBonus = dish.need.some(n => savedIngredients.has(n)) ? -70 : 0;
-        const randomFactor = (Math.random() - 0.5) * 50;
+        const scored = poolToUse.map(item => ({
+          dish: item,
+          withRice: false,
+          score: Math.abs(item.calories - targetCal) + (Math.random() - 0.5) * 30
+        }));
 
-        return {
-          dish,
-          withRice,
-          mealCal,
-          score: calDiff + pantryBonus + randomFactor
+        scored.sort((a, b) => a.score - b.score);
+        const pick = scored[0].dish;
+
+        usedMenuNames.add(pick.name);
+        currentPlan[day.id][slot] = {
+          name: pick.name,
+          methods: pick.methods,
+          withRice: false,
+          sideDish: null
         };
-      });
+      } else {
+        // เลือกมื้อหลัก (เช้า / กลางวัน / เย็น)
+        const available = mainAndSinglePool.filter(m => !usedMenuNames.has(m.name));
+        const poolToUse = available.length ? available : mainAndSinglePool;
 
-      scored.sort((a, b) => a.score - b.score);
-      const pick = scored[0];
+        const scored = poolToUse.map(dish => {
+          const withRice = (dish.type === "main");
+          const mealCal = dish.calories + (withRice ? RICE_SERVING.calories : 0);
+          const calDiff = Math.abs(mealCal - targetCal);
+          const pantryBonus = dish.need.some(n => savedIngredients.has(n)) ? -60 : 0;
+          const randomFactor = (Math.random() - 0.5) * 40;
 
-      usedMenuNames.add(pick.dish.name);
-      currentPlan[day.id][slot] = {
-        name: pick.dish.name,
-        methods: pick.dish.methods,
-        withRice: pick.withRice,
-        sideDish: null
-      };
+          return {
+            dish,
+            withRice,
+            score: calDiff + pantryBonus + randomFactor
+          };
+        });
+
+        scored.sort((a, b) => a.score - b.score);
+        const pick = scored[0];
+
+        usedMenuNames.add(pick.dish.name);
+        currentPlan[day.id][slot] = {
+          name: pick.dish.name,
+          methods: pick.dish.methods,
+          withRice: pick.withRice,
+          sideDish: null
+        };
+      }
     });
 
-    // ปรับความสมดุลทั้งวัน (Daily Calorie Balancing)
-    // ถ้ายอดรวมทั้งวันยังไม่ถึงเป้าหมาย ให้เติมเมนูเคียง (ไข่ต้ม/ไข่ดาว) ลงในมื้อกลางวันหรือมื้อเช้า
+    // ปรับบาลานซ์พลังงานทั้งวัน (Daily Balancing)
     let currentDayCal = 0;
     slots.forEach(s => {
       currentDayCal += getMealNutrition(currentPlan[day.id][s]).calories;
@@ -288,8 +343,8 @@ function autoGeneratePlan() {
 
     const deficit = nutritionGoal.calories - currentDayCal;
 
-    // ถ้าขาดมากกว่า 90 kcal ให้เพิ่มเมนูเสริมเข้าไปในมื้อกลางวัน
-    if (deficit >= 90) {
+    // ถ้าแคลอรียังขาดเกิน 80 kcal ให้เติมไข่ต้ม/ไข่ดาวเพื่อเพิ่มทั้งพลังงานและโปรตีน
+    if (deficit >= 80) {
       const bestSide = (deficit >= 130) ? "ไข่ดาว" : "ไข่ต้มยางมะตูม";
       if (currentPlan[day.id].lunch) {
         currentPlan[day.id].lunch.sideDish = bestSide;
@@ -307,13 +362,13 @@ function autoGeneratePlan() {
 // ระบบเลือกเมนูใส่ตาราง (Menu Picker Modal)
 // ==========================================
 let activePickerSlot = null; // { dayId, mealId }
-let modalMethodFilter = new Set();
+let modalFilterType = "all"; // "all" | "single" | "main" | "snack" | "ต้ม" | "ทอด" | "ย่าง"
 
 function openPicker(dayId, mealId) {
   activePickerSlot = { dayId, mealId };
 
   const dayObj = DAYS.find(d => d.id === dayId);
-  const mealObj = MEALS.find(m => m.id === mealId);
+  const mealObj = ALL_MEALS.find(m => m.id === mealId);
 
   const titleEl = document.querySelector("#modalSlotTitle");
   const subtitleEl = document.querySelector("#modalSlotSubtitle");
@@ -327,11 +382,12 @@ function openPicker(dayId, mealId) {
     const currentItem = currentPlan[dayId]?.[mealId];
     subtitleEl.textContent = currentItem 
       ? `เมนูปัจจุบัน: ${currentItem.name} (คลิกเมนูใหม่เพื่อเปลี่ยน)`
-      : "เลือกเมนูที่ต้องการเพื่อใส่ลงในมื้อนี้";
+      : (mealObj?.isSnack ? "เลือกของว่างสุขภาพหรือเครื่องดื่มเพื่อเติมพลังงาน" : "เลือกเมนูที่ต้องการเพื่อใส่ลงในมื้อนี้");
   }
 
   if (searchInput) searchInput.value = "";
-  modalMethodFilter.clear();
+  // ถ้าคลิกมื้อว่าง ให้เปิดหมวดของว่างเป็นค่าเริ่มต้น
+  modalFilterType = mealObj?.isSnack ? "snack" : "all";
 
   renderModalFilters();
   renderModalMenuList();
@@ -357,7 +413,6 @@ function selectMenu(menuName) {
   if (found) {
     const { dayId, mealId } = activePickerSlot;
     if (!currentPlan[dayId]) currentPlan[dayId] = {};
-    // กับข้าว (main) จะเสิร์ฟพร้อมข้าวสวยเป็นค่าเริ่มต้น
     const withRice = (found.type === "main");
     currentPlan[dayId][mealId] = {
       name: found.name,
@@ -375,20 +430,25 @@ function renderModalFilters() {
   const container = document.querySelector("#modalFilters");
   if (!container) return;
 
-  container.innerHTML = ["ต้ม", "ทอด", "ย่าง"].map(method => `
-    <button class="filter" aria-pressed="${modalMethodFilter.has(method)}" data-modal-method="${method}">
-      ${method}
+  const filters = [
+    { id: "all", label: "ทั้งหมด" },
+    { id: "single", label: "จานเดียว" },
+    { id: "main", label: "กับข้าว" },
+    { id: "snack", label: "🥪 ของว่าง/ผลไม้" },
+    { id: "ต้ม", label: "ต้ม" },
+    { id: "ทอด", label: "ทอด" },
+    { id: "ย่าง", label: "ย่าง" }
+  ];
+
+  container.innerHTML = filters.map(f => `
+    <button class="filter" aria-pressed="${modalFilterType === f.id}" data-filter-type="${f.id}">
+      ${f.label}
     </button>
   `).join("");
 
-  container.querySelectorAll("[data-modal-method]").forEach(btn => {
+  container.querySelectorAll("[data-filter-type]").forEach(btn => {
     btn.onclick = () => {
-      const method = btn.dataset.modalMethod;
-      if (modalMethodFilter.has(method)) {
-        modalMethodFilter.delete(method);
-      } else {
-        modalMethodFilter.add(method);
-      }
+      modalFilterType = btn.dataset.filterType;
       renderModalFilters();
       renderModalMenuList();
     };
@@ -407,10 +467,16 @@ function renderModalMenuList() {
       m.name.toLowerCase().includes(query) || 
       m.need.some(n => n.toLowerCase().includes(query));
 
-    const matchMethod = !modalMethodFilter.size || 
-      m.methods.some(method => modalMethodFilter.has(method));
+    let matchFilter = true;
+    if (modalFilterType === "all") {
+      matchFilter = true;
+    } else if (modalFilterType === "single" || modalFilterType === "main" || modalFilterType === "snack") {
+      matchFilter = (m.type === modalFilterType);
+    } else {
+      matchFilter = m.methods.includes(modalFilterType);
+    }
 
-    return matchQuery && matchMethod;
+    return matchQuery && matchFilter;
   });
 
   if (!filtered.length) {
@@ -419,7 +485,7 @@ function renderModalMenuList() {
   }
 
   container.innerHTML = filtered.map(m => {
-    const typeLabel = m.type === "single" ? "จานเดียว" : (m.type === "main" ? "กับข้าว" : "เครื่องเคียง");
+    const typeLabel = m.type === "single" ? "จานเดียว" : (m.type === "main" ? "กับข้าว" : (m.type === "snack" ? "ของว่าง" : "เครื่องเคียง"));
     const totalCal = m.type === "main" ? `${m.calories} (+ ข้าว 200)` : `${m.calories}`;
 
     return `
@@ -441,16 +507,19 @@ function renderPlanner() {
   const container = document.querySelector("#plannerGrid");
   if (!container) return;
 
+  const activeMeals = getActiveMeals();
+
   let totalPlanned = 0;
   DAYS.forEach(d => {
-    MEALS.forEach(m => {
+    activeMeals.forEach(m => {
       if (currentPlan[d.id]?.[m.id]) totalPlanned++;
     });
   });
 
+  const totalSlots = DAYS.length * activeMeals.length;
   const summaryEl = document.querySelector("#plannerSummary");
   if (summaryEl) {
-    summaryEl.textContent = `วางแผนแล้ว ${totalPlanned} / 21 มื้อ`;
+    summaryEl.textContent = `วางแผนแล้ว ${totalPlanned} / ${totalSlots} มื้อ (${activeMeals.length} มื้อ/วัน)`;
   }
 
   container.innerHTML = DAYS.map(day => {
@@ -459,7 +528,7 @@ function renderPlanner() {
     let dayCalories = 0;
     let dayProtein = 0;
 
-    MEALS.forEach(m => {
+    activeMeals.forEach(m => {
       const slot = dayPlan[m.id];
       if (slot) {
         const nut = getMealNutrition(slot);
@@ -477,7 +546,7 @@ function renderPlanner() {
       progressClass = "progress-fill-over";
     }
 
-    const mealsHtml = MEALS.map(meal => {
+    const mealsHtml = activeMeals.map(meal => {
       const item = dayPlan[meal.id];
       if (item) {
         const dish = menus.find(m => m.name === item.name);
@@ -485,7 +554,7 @@ function renderPlanner() {
         const isMainDish = (dish && dish.type === "main") || item.withRice;
 
         return `
-          <div class="meal-slot slot-filled" onclick="openPicker('${day.id}', '${meal.id}')" title="คลิกเพื่อเปลี่ยนเมนู">
+          <div class="meal-slot slot-filled ${meal.isSnack ? "slot-snack" : ""}" onclick="openPicker('${day.id}', '${meal.id}')" title="คลิกเพื่อเปลี่ยนเมนู">
             <div class="meal-header">
               <span class="meal-tag">${meal.icon} ${meal.label}</span>
               <button class="slot-remove-btn" title="ลบมื้อนี้" onclick="removeMeal(event, '${day.id}', '${meal.id}')">✕</button>
@@ -495,7 +564,6 @@ function renderPlanner() {
               ${esc(item.name)}
             </div>
 
-            <!-- แถบแสดงส่วนประกอบเพิ่มเติม เช่น ข้าวสวย / เครื่องเคียง -->
             <div class="meal-combos">
               ${isMainDish ? `
                 <button class="rice-toggle-btn ${item.withRice ? "active" : ""}" title="คลิกเพื่อเปิด/ปิดข้าวสวย" onclick="toggleRice(event, '${day.id}', '${meal.id}')">
@@ -515,9 +583,9 @@ function renderPlanner() {
         `;
       } else {
         return `
-          <div class="meal-slot slot-empty" onclick="openPicker('${day.id}', '${meal.id}')" title="คลิกเพื่อเลือกเมนู">
+          <div class="meal-slot slot-empty ${meal.isSnack ? "slot-empty-snack" : ""}" onclick="openPicker('${day.id}', '${meal.id}')" title="คลิกเพื่อเลือกเมนู">
             <span class="meal-tag">${meal.icon} ${meal.label}</span>
-            <div class="empty-prompt">+ เพิ่มเมนู</div>
+            <div class="empty-prompt">${meal.isSnack ? "+ เลือกของว่าง" : "+ เพิ่มเมนู"}</div>
           </div>
         `;
       }
@@ -550,14 +618,15 @@ function renderPlanner() {
 }
 
 // ==========================================
-// รายการของที่ต้องซื้อ (Step 4: Smart Grocery List)
+// รายการของที่ต้องซื้อ (Smart Grocery List)
 // ==========================================
 function calculateGroceryList() {
   const savedIngredients = new Set(JSON.parse(localStorage.getItem("ingredients-v1") || "[]"));
   const ingredientCounts = {};
+  const activeMeals = getActiveMeals();
 
   DAYS.forEach(d => {
-    MEALS.forEach(m => {
+    activeMeals.forEach(m => {
       const slot = currentPlan[d.id]?.[m.id];
       if (slot && slot.name) {
         const dishObj = menus.find(menu => menu.name === slot.name);
@@ -570,12 +639,10 @@ function calculateGroceryList() {
           });
         }
 
-        // นับข้าวสวยถ้าเลือกรับข้าว
         if (slot.withRice) {
           ingredientCounts["ข้าวสวย"] = (ingredientCounts["ข้าวสวย"] || 0) + 1;
         }
 
-        // นับเมนูเสริม เช่น ไข่ต้ม, ไข่ดาว
         if (slot.sideDish) {
           const sideObj = menus.find(menu => menu.name === slot.sideDish);
           if (sideObj && sideObj.need) {
@@ -745,6 +812,11 @@ function copyGroceryListToClipboard() {
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
   updateNutritionGoalUI();
+  updateSnackBtnUI();
+
+  // ปุ่มสลับโหมดมื้อว่าง
+  const toggleSnackBtn = document.querySelector("#toggleSnackBtn");
+  if (toggleSnackBtn) toggleSnackBtn.onclick = toggleSnackSetting;
 
   const openNutritionBtn = document.querySelector("#openNutritionModalBtn");
   if (openNutritionBtn) openNutritionBtn.onclick = openNutritionModal;
@@ -770,7 +842,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
 
-  // ปุ่มสุ่มจัดตารางอาหารอัจฉริยะตามแคลอรี
+  // ปุ่มสุ่มจัดตารางอาหารอัจฉริยะ
   const autoPlanBtn = document.querySelector("#autoPlanBtn");
   if (autoPlanBtn) {
     autoPlanBtn.onclick = autoGeneratePlan;
